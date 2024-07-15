@@ -32,6 +32,11 @@ module JSrb
     __jsprop__(sym) != JS::Undefined || __jsprop__(jssym) != JS::Undefined
   end
 
+  def to_h
+    x = JS.global.__jsprop__(:Object).call(:entries, self)
+    x.length.times.map.to_h{|i| [x[i][0].intern, x[i][1]]}
+  end
+
   # @param sym [Symbol]
   # @return [Object]
   def [](sym)
