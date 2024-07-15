@@ -8,35 +8,28 @@ module JSrb
   # hoge_fuga を hogeFuga に変換して JavaScript を呼び出し、
   # 値を JS::Object から Ruby に変換して返す
   def method_missing(sym, *args, &block)
-    if __jsprop__(sym) == JS::Undefined
-      if sym.end_with? '='
-        equal = true
-        sym = sym.to_s.chop.intern
-      end
-      if __jsprop__(sym) == JS::Undefined && sym =~ /_[a-z]/
-        sym2 = sym.to_s.gsub(/_([a-z])/){$1.upcase}.intern
-        if __jsprop__(sym2) == JS::Undefined
-          raise NoMethodError, "undefined method `#{sym}' for #{self.inspect}"
-        end
-        sym = sym2
-      end
+    jssym = sym.to_s.gsub(/_([a-z])/){$1.upcase}.intern
+    if __jsprop__(jssym) == JS::Undefined
+      raise NoMethodError, "undefined method '#{sym}' for #{self.inspect}" unless jssym.end_with? '='
+      equal = true
+      jssym = jssym.to_s.chop.intern
     end
-    v = __jsprop__(sym)
+    v = __jsprop__(jssym)
     if v.typeof == 'function'
-      __convert_value__(self.call(sym, *args, &block))
+      __convert_value__(self.call(jssym, *args, &block))
     elsif !equal && args.empty?
       __convert_value__(v)
     elsif equal && args.length == 1
-      self[sym] = args.first
+      self[jssym] = args.first
     else
-      raise NoMethodError, "undefined method `#{sym}' for #{self.inspect}"
+      raise NoMethodError, "undefined method '#{sym}' for #{self.inspect}"
     end
   end
 
   def respond_to_missing?(sym, include_private)
     return true if super
-    sym2 = sym.to_s.gsub(/_([a-z])/){$1.upcase}
-    __jsprop__(sym) != JS::Undefined || __jsprop__(sym2) != JS::Undefined
+    jssym = sym.to_s.sub(/=$/, '').gsub(/_([a-z])/){$1.upcase}.intern
+    __jsprop__(sym) != JS::Undefined || __jsprop__(jssym) != JS::Undefined
   end
 
   # @param sym [Symbol]
@@ -45,17 +38,19 @@ module JSrb
     __convert_value__(super)
   end
 
-  private
-
   # @param sym [Symbol]
   # @return [JS::Object]
   def __jsprop__(sym)
     self.method(:[]).super_method.call(sym.intern)
   end
 
+  private
+
   # @param v [JS::Object]
   # @return [Object]
   def __convert_value__(v)
+    return nil if v == JS::Null || v == JS::Undefined
+
     case v.typeof
     when 'number'
       v.to_s =~ /\./ ? v.to_f : v.to_i
@@ -66,12 +61,23 @@ module JSrb
     when 'boolean'
       v.to_s == 'true'
     else
-      if v.to_s =~ /\A\[object .*(List|Collection)\]\z/
+      if JS.global.__jsprop__(:Array).call(:isArray, v).to_s == 'true'
         v.length.times.map{|i| v[i]}
-      elsif v == JS::Null || v == JS::Undefined
-        nil
+      elsif v.__jsprop__(:length).typeof == 'number' && v.__jsprop__(:item).typeof == 'function'
+        v.extend Enumerable
+        v
       else
         v
+      end
+    end
+  end
+
+  module Enumerable
+    include ::Enumerable
+
+    def each
+      self.length.times do |i|
+        yield self.item(i)
       end
     end
   end
