@@ -2,6 +2,14 @@ require 'js'
 
 # JS を Ruby ぽく扱えるようにする
 class JSrb
+  def self.window
+    JSrb.new(JS.global)
+  end
+
+  def self.document
+    window.document
+  end
+
   # @param obj [JS::Object]
   def initialize(obj)
     @obj = obj
@@ -96,5 +104,3 @@ class JSrb
     end
   end
 end
-
-$document = JSrb.new(JS.global[:document])
