@@ -1,52 +1,60 @@
 require 'js'
 
-JS::Object.undef_method(:then)  # JS の then を呼ぶために Ruby の then を無効化
-Document = JS.global[:document]
-
 # JS を Ruby ぽく扱えるようにする
-module JSrb
+class JSrb
+  # @param obj [JS::Object]
+  def initialize(obj)
+    @obj = obj
+  end
+
   # hoge_fuga を hogeFuga に変換して JavaScript を呼び出し、
   # 値を JS::Object から Ruby に変換して返す
   def method_missing(sym, *args, &block)
     jssym = sym.to_s.gsub(/_([a-z])/){$1.upcase}.intern
-    if __jsprop__(jssym) == JS::Undefined
-      raise NoMethodError, "undefined method '#{sym}' for #{self.inspect}" unless jssym.end_with? '='
+    if @obj[jssym] == JS::Undefined
+      super unless jssym.end_with? '='
       equal = true
       jssym = jssym.to_s.chop.intern
     end
-    v = __jsprop__(jssym)
+    v = @obj[jssym]
     if v.typeof == 'function'
-      __convert_value__(self.call(jssym, *args, &block))
+      __convert_value__(@obj.call(jssym, *args, &block))
     elsif !equal && args.empty?
       __convert_value__(v)
     elsif equal && args.length == 1
-      self[jssym] = args.first
+      @obj[jssym] = args.first
     else
-      raise NoMethodError, "undefined method '#{sym}' for #{self.inspect}"
+      super
     end
   end
 
   def respond_to_missing?(sym, include_private)
     return true if super
     jssym = sym.to_s.sub(/=$/, '').gsub(/_([a-z])/){$1.upcase}.intern
-    __jsprop__(sym) != JS::Undefined || __jsprop__(jssym) != JS::Undefined
+    @obj[sym] != JS::Undefined || @obj[jssym] != JS::Undefined
+  end
+
+  def to_s
+    @obj.to_s
+  end
+
+  def to_i
+    @obj.to_i
   end
 
   def to_h
-    x = JS.global.__jsprop__(:Object).call(:entries, self)
+    x = JSrb.new(JS.global[:Object].call(:entries, @obj))
     x.length.times.map.to_h{|i| [x[i][0].intern, x[i][1]]}
+  end
+
+  def inspect
+    "#<JSrb: #{@obj.inspect}>"
   end
 
   # @param sym [Symbol]
   # @return [Object]
   def [](sym)
-    __convert_value__(super)
-  end
-
-  # @param sym [Symbol]
-  # @return [JS::Object]
-  def __jsprop__(sym)
-    self.method(:[]).super_method.call(sym.intern)
+    __convert_value__(@obj[sym])
   end
 
   private
@@ -66,13 +74,14 @@ module JSrb
     when 'boolean'
       v.to_s == 'true'
     else
-      if JS.global.__jsprop__(:Array).call(:isArray, v).to_s == 'true'
-        v.length.times.map{|i| v[i]}
-      elsif v.__jsprop__(:length).typeof == 'number' && v.__jsprop__(:item).typeof == 'function'
-        v.extend Enumerable
+      if JS.global[:Array].call(:isArray, v).to_s == 'true'
+        v[:length].to_i.times.map{|i| __convert_value__(v[i])}
+      elsif v[:length].typeof == 'number' && v[:item].typeof == 'function'
+        v = JSrb.new(v)
+        v.extend JSrb::Enumerable
         v
       else
-        v
+        JSrb.new(v)
       end
     end
   end
@@ -88,6 +97,4 @@ module JSrb
   end
 end
 
-class JS::Object
-  prepend JSrb
-end
+$document = JSrb.new(JS.global[:document])
