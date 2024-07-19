@@ -1,4 +1,5 @@
 require 'js'
+require 'time'
 
 # JS を Ruby ぽく扱えるようにする
 class JSrb
@@ -8,6 +9,35 @@ class JSrb
 
   def self.document
     window.document
+  end
+
+  # @param v [JS::Object]
+  # @return [Object]
+  def self.convert(v)
+    return nil if v == JS::Null || v == JS::Undefined
+
+    case v.typeof
+    when 'number'
+      v.to_s =~ /\./ ? v.to_f : v.to_i
+    when 'bigint'
+      v.to_i
+    when 'string'
+      v.to_s
+    when 'boolean'
+      v.to_s == 'true'
+    else
+      if JS.global[:Array].call(:isArray, v).to_s == 'true'
+        v[:length].to_i.times.map{|i| JSrb.convert(v[i])}
+      elsif v[:length].typeof == 'number' && v[:item].typeof == 'function'
+        v = JSrb.new(v)
+        v.extend JSrb::Enumerable
+        v
+      elsif v[:constructor].toString.to_s =~ /function Date()/
+        Time.parse(v.toISOString.to_s)
+      else
+        JSrb.new(v)
+      end
+    end
   end
 
   # @param obj [JS::Object]
@@ -26,9 +56,9 @@ class JSrb
     end
     v = @obj[jssym]
     if v.typeof == 'function'
-      __convert_value__(@obj.call(jssym, *args, &block))
+      JSrb.convert(@obj.call(jssym, *args, &block))
     elsif !equal && args.empty?
-      __convert_value__(v)
+      JSrb.convert(v)
     elsif equal && args.length == 1
       @obj[jssym] = args.first
     else
@@ -62,37 +92,10 @@ class JSrb
   # @param sym [Symbol]
   # @return [Object]
   def [](sym)
-    __convert_value__(@obj[sym])
+    JSrb.convert(@obj[sym])
   end
 
   private
-
-  # @param v [JS::Object]
-  # @return [Object]
-  def __convert_value__(v)
-    return nil if v == JS::Null || v == JS::Undefined
-
-    case v.typeof
-    when 'number'
-      v.to_s =~ /\./ ? v.to_f : v.to_i
-    when 'bigint'
-      v.to_i
-    when 'string'
-      v.to_s
-    when 'boolean'
-      v.to_s == 'true'
-    else
-      if JS.global[:Array].call(:isArray, v).to_s == 'true'
-        v[:length].to_i.times.map{|i| __convert_value__(v[i])}
-      elsif v[:length].typeof == 'number' && v[:item].typeof == 'function'
-        v = JSrb.new(v)
-        v.extend JSrb::Enumerable
-        v
-      else
-        JSrb.new(v)
-      end
-    end
-  end
 
   module Enumerable
     include ::Enumerable
