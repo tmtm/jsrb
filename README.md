@@ -34,7 +34,7 @@ elements[:length]           #=> 3 (JS::Object)
 elements[0][:style][:width] #=> "100px" (JS::Object)
 ```
 
-ruby.wasm JSrb:
+**ruby.wasm JSrb**:
 ```ruby
 elements = JSrb.document.querySelectorAll('div')
 elements[:length]           #=> 3 (Integer)
@@ -57,7 +57,7 @@ elements[:length]           #=> 3 (JS::Object)
 elements[0][:style][:width] #=> "100px" (JS::Object)
 ```
 
-ruby.wasm JSrb:
+**ruby.wasm JSrb**:
 ```ruby
 elements = JSrb.document.querySelectorAll('div')
 elements.length             #=> 3 (Integer)
@@ -80,7 +80,7 @@ div = JS.global[:document].querySelector('div')
 div[:innerText]
 ```
 
-ruby.wasm JSrb:
+**ruby.wasm JSrb**:
 ```ruby
 div = JSrb.document.query_selector('div')
 div.inner_text
@@ -96,7 +96,7 @@ elements[:length].to_i.times do |i|
 end
 ```
 
-ruby.wasm JSrb:
+**ruby.wasm JSrb**:
 ```ruby
 elements = JSrb.document.query_selector_all('div')
 elements.each do |element|
