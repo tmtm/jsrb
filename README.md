@@ -64,6 +64,8 @@ elements.length             #=> 3 (Integer)
 elements[0].style.width     #=> "100px" (String)
 ```
 
+プロパティと同名の関数があったらそれが呼ばれてしまうので、その場合は `[]` で参照する必要がある。
+
 ### キャメルケースのプロパティやメソッドをスネークケースで呼べる
 
 JavaScript:
@@ -132,6 +134,10 @@ JavaScript の Object を Hash に変換する:
 ```ruby
 JSrb.new(JS.eval('return {a:1,b:2}')).to_h #=> {:a=>1, :b=>2}
 ```
+
+### `JSrb#js_object`
+
+`JSrb` がラップしている `JS::Object` を返す
 
 ## License
 
