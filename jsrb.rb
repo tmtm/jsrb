@@ -93,6 +93,11 @@ class JSrb
     JSrb.convert(@obj[sym])
   end
 
+  # @return [JS::Object]
+  def js_object
+    @obj
+  end
+
   private
 
   module Enumerable
