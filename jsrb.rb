@@ -3,11 +3,11 @@ require 'js'
 # JS を Ruby ぽく扱えるようにする
 class JSrb
   def self.window
-    JSrb.new(JS.global)
+    @window ||= JSrb.new(JS.global[:window])
   end
 
   def self.document
-    window.document
+    @document ||= JSrb.new(JS.global[:document])
   end
 
   # @param v [JS::Object]
@@ -54,12 +54,14 @@ class JSrb
       jssym = jssym.to_s.chop.intern
     end
     v = @obj[jssym]
-    if v.typeof == 'function'
-      JSrb.convert(@obj.call(jssym, *args, &block))
-    elsif !equal && args.empty?
-      JSrb.convert(v)
-    elsif equal && args.length == 1
+    if equal
       @obj[jssym] = args.first
+    elsif v.typeof == 'function'
+      args = args.map{|a| a.is_a?(JSrb) ? a.js_object : a}
+      block_ = block ? proc{|*v| block.call(*v.map{JSrb.convert(_1)})} : nil
+      JSrb.convert(@obj.call(jssym, *args, &block_))
+    elsif args.empty?
+      JSrb.convert(v)
     else
       super
     end
