@@ -2,12 +2,21 @@ require 'js'
 
 # JS を Ruby ぽく扱えるようにする
 class JSrb
+  def self.global
+    @global ||= JSrb.new(JS.global)
+  end
+
   def self.window
-    @window ||= JSrb.new(JS.global[:window])
+    @window ||= global.window
   end
 
   def self.document
-    @document ||= JSrb.new(JS.global[:document])
+    @document ||= global.document
+  end
+
+  # @param sec [Numeric] seocnd
+  def self.timeout(sec, &block)
+    JS.global.setTimeout(->{Fiber.new{block.call}.transfer if block}, sec * 1000)
   end
 
   # @param v [JS::Object]
@@ -48,19 +57,18 @@ class JSrb
   # 値を JS::Object から Ruby に変換して返す
   def method_missing(sym, *args, &block)
     jssym = sym.to_s.gsub(/_([a-z])/){$1.upcase}.intern
-    if @obj[jssym] == JS::Undefined
-      super unless jssym.end_with? '='
-      equal = true
-      jssym = jssym.to_s.chop.intern
+    jsargs = args.map{|a| a.is_a?(JSrb) ? a.js_object : a}
+    jsblock = block ? proc{|*v| block.call(*v.map{JSrb.convert(_1)})} : nil
+    if jssym.end_with? '='
+      return @obj.__send__(jssym, *jsargs, &jsblock) if @obj.respond_to? jssym
+      return @obj.__send__(:[]=, jssym.to_s.chop.intern, *jsargs, &jsblock)
     end
     v = @obj[jssym]
-    if equal
-      @obj[jssym] = args.first
-    elsif v.typeof == 'function'
-      args = args.map{|a| a.is_a?(JSrb) ? a.js_object : a}
-      block_ = block ? proc{|*v| block.call(*v.map{JSrb.convert(_1)})} : nil
-      JSrb.convert(@obj.call(jssym, *args, &block_))
-    elsif args.empty?
+    if v.typeof == 'function'
+      JSrb.convert(@obj.call(jssym, *jsargs, &jsblock))
+    elsif v == JS::Undefined && @obj.respond_to?(jssym)
+      JSrb.convert(@obj.__send__(jssym, *jsargs, &jsblock))
+    elsif v != JS::Undefined && args.empty?
       JSrb.convert(v)
     else
       super
@@ -69,6 +77,7 @@ class JSrb
 
   def respond_to_missing?(sym, include_private)
     return true if super
+    return true if @obj.respond_to? sym
     jssym = sym.to_s.sub(/=$/, '').gsub(/_([a-z])/){$1.upcase}.intern
     @obj[sym] != JS::Undefined || @obj[jssym] != JS::Undefined
   end
@@ -106,9 +115,23 @@ class JSrb
     include ::Enumerable
 
     def each
-      self.length.times do |i|
+      i = 0
+      while i < length
         yield self.item(i)
+        i += 1
       end
+    end
+
+    def size
+      length
+    end
+
+    def empty?
+      length == 0
+    end
+
+    def last
+      self[length - 1]
     end
   end
 end

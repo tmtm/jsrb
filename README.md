@@ -108,6 +108,10 @@ end
 
 JavaScript の `window` オブジェクトに対応
 
+### `JSrb.global`
+
+`JSrb.window` と同じ
+
 ### `JSrb.document`
 
 JavaScript の `document` オブジェクトに対応
@@ -134,6 +138,10 @@ JavaScript の Object を Hash に変換する:
 ```ruby
 JSrb.new(JS.eval('return {a:1,b:2}')).to_h #=> {:a=>1, :b=>2}
 ```
+
+### `JSrb#timeout(sec) { ... }`
+
+sec 秒後にブロックを実行する
 
 ### `JSrb#js_object`
 
