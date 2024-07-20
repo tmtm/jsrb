@@ -1,5 +1,4 @@
 require 'js'
-require 'time'
 
 # JS を Ruby ぽく扱えるようにする
 class JSrb
@@ -18,25 +17,25 @@ class JSrb
 
     case v.typeof
     when 'number'
-      v.to_s =~ /\./ ? v.to_f : v.to_i
+      return v.to_s =~ /\./ ? v.to_f : v.to_i
     when 'bigint'
-      v.to_i
+      return v.to_i
     when 'string'
-      v.to_s
+      return v.to_s
     when 'boolean'
-      v.to_s == 'true'
+      return v == JS::True
+    end
+
+    if v[:constructor] == JS.global[:Array]
+      v[:length].to_i.times.map{|i| JSrb.convert(v[i])}
+    elsif v[:length].typeof == 'number' && v[:item].typeof == 'function'
+      v = JSrb.new(v)
+      v.extend JSrb::Enumerable
+      v
+    elsif v[:constructor] == JS.global[:Date]
+      Time.new(v.toISOString.to_s)
     else
-      if JS.global[:Array].call(:isArray, v).to_s == 'true'
-        v[:length].to_i.times.map{|i| JSrb.convert(v[i])}
-      elsif v[:length].typeof == 'number' && v[:item].typeof == 'function'
-        v = JSrb.new(v)
-        v.extend JSrb::Enumerable
-        v
-      elsif v[:constructor].toString.to_s =~ /function Date()/
-        Time.parse(v.toISOString.to_s)
-      else
-        JSrb.new(v)
-      end
+      JSrb.new(v)
     end
   end
 
@@ -81,8 +80,7 @@ class JSrb
   end
 
   def to_h
-    x = JSrb.new(JS.global[:Object].call(:entries, @obj))
-    x.length.times.map.to_h{|i| [x[i][0].intern, x[i][1]]}
+    JSrb.window[:Object].entries(@obj).to_h
   end
 
   def inspect
