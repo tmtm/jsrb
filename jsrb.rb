@@ -7,11 +7,11 @@ class JSrb
   end
 
   def self.window
-    @window ||= global.window
+    @window ||= global[:window]
   end
 
   def self.document
-    @document ||= global.document
+    @document ||= global[:document]
   end
 
   # @param sec [Numeric] seocnd
