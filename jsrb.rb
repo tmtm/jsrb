@@ -109,8 +109,6 @@ class JSrb
     @obj
   end
 
-  private
-
   module Enumerable
     include ::Enumerable
 
