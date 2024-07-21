@@ -144,6 +144,21 @@ JSrb.new(JS.eval('return {a:1,b:2}')).to_h #=> {:a=>1, :b=>2}
 
 sec 秒後にブロックを実行する
 
+`JS.global.setTimeout` と異なり、ブロック内で await も使える。
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/browser.script.iife.js"></script>
+<script type="text/ruby" src="jsrb.rb"></script>
+<script type="text/ruby" data-eval="async">
+  require 'js'
+  def hoge = p JS.global.fetch("/").await
+  JS.global.setTimeout(->{hoge}, 0)
+    #=> Uncaught Error: /bundle/gems/js-2.6.2/lib/js.rb:86:in `await': JS::Object#await can be called only from RubyVM#evalAsync or RbValue#callAsync JS API
+  JSrb.timeout(0){hoge}
+    #=> OK!
+</script>
+```
+
 ### `JSrb#js_object`
 
 `JSrb` がラップしている `JS::Object` を返す
