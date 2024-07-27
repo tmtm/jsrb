@@ -7,9 +7,8 @@ ruby.wasm の js.rb を Ruby っぽく使えるようにするためのラッパ
 ```html
 <!DOCTYPE html>
 <html>
-  <script src="https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/browser.script.iife.js">
-  </script>
-  <script type="text/ruby" src="path/to/jsrb.rb"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/browser.script.iife.js"></script>
+  <script type="text/ruby" src="https://cdn.jsdelivr.net/gh/tmtm/jsrb@v0.1.0/jsrb.rb"></script>
   <script type="text/ruby">
     ...
   </script>
